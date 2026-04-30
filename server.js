@@ -17,8 +17,17 @@ const plannerRoutes = require("./routes/plannerRoutes");
 
 const app = express();
 
-app.use(cors());
+// Middleware
 app.use(express.json());
+
+// ✅ FIXED CORS (Express 5 Safe)
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -39,13 +48,11 @@ app.get("/", (req, res) => {
 // PORT
 const PORT = process.env.PORT || 5000;
 
-// Connect MongoDB ONCE
+// Connect MongoDB
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("MongoDB Connected Successfully");
-    console.log("CONNECTED DB:", mongoose.connection.name);
-    console.log("CONNECTED HOST:", mongoose.connection.host);
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
