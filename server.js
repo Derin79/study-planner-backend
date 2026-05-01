@@ -20,14 +20,16 @@ const app = express();
 // Middleware
 app.use(express.json());
 
-// ✅ FIXED CORS (Express 5 Safe)
 app.use(
   cors({
     origin: "*",
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
+
+// Handle preflight requests
+app.options("*", cors());
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -45,19 +47,12 @@ app.get("/", (req, res) => {
   res.send("Gamified Study Planner API Running...");
 });
 
-// PORT
 const PORT = process.env.PORT || 5000;
 
-// Connect MongoDB
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("MongoDB Connected Successfully");
-
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })
-  .catch((err) => {
-    console.log("MongoDB Connection Error:", err.message);
-  });
+  .catch((err) => console.log("MongoDB Connection Error:", err.message));
