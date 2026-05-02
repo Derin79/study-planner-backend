@@ -1,4 +1,3 @@
-// const taskRoutes = require("./routes/taskRoutes");
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -17,19 +16,20 @@ const plannerRoutes = require("./routes/plannerRoutes");
 
 const app = express();
 
-// Middleware
-app.use(express.json());
-
+// ✅ FIXED CORS SETTINGS
 app.use(
   cors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "https://study-planner-frontend-ab1d.onrender.com",
+    ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    credentials: true,
   }),
 );
 
-// Handle preflight requests
-app.options("*", cors());
+app.use(express.json());
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -47,12 +47,21 @@ app.get("/", (req, res) => {
   res.send("Gamified Study Planner API Running...");
 });
 
+// PORT
 const PORT = process.env.PORT || 5000;
 
+// Connect MongoDB ONCE
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("MongoDB Connected Successfully");
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    console.log("CONNECTED DB:", mongoose.connection.name);
+    console.log("CONNECTED HOST:", mongoose.connection.host);
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
   })
-  .catch((err) => console.log("MongoDB Connection Error:", err.message));
+  .catch((err) => {
+    console.log("MongoDB Connection Error:", err.message);
+  });
