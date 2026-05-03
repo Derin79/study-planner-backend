@@ -19,13 +19,9 @@ const app = express();
 // ✅ FIXED CORS SETTINGS
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:3000",
-      "https://study-planner-frontend-ab1d.onrender.com",
-    ],
+    origin: "*",
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 
