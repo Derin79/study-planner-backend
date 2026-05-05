@@ -118,7 +118,7 @@ exports.stopTimer = async (req, res) => {
     await record.save();
 
     // ✅ Update streak after timer stops
-    await updateStreak(record.userId);
+    // await updateStreak(record.userId);
 
     res.status(200).json({
       message: "Timer stopped",
