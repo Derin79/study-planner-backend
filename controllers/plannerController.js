@@ -10,7 +10,7 @@ function getStudyHours(preferredStudyTime) {
   return [18, 19, 20, 21, 22];
 }
 
-// NEXT 14 DAYS SLOTS
+// NEXT 14 DAYS
 function getNext14DaysSlots() {
   const today = new Date();
   let slots = [];
@@ -26,7 +26,7 @@ function getNext14DaysSlots() {
     slots.push({
       date,
       dayName,
-      fullDate: date.toISOString().split("T")[0], // YYYY-MM-DD
+      fullDate: date.toISOString().split("T")[0],
     });
   }
 
@@ -34,7 +34,7 @@ function getNext14DaysSlots() {
 }
 
 // ==========================================
-// ✅ REUSABLE PLANNER LOGIC FUNCTION
+// ✅ FIXED SMART PLANNER
 // ==========================================
 const generatePlanLogic = async (userId) => {
   const preferences = await UserPreferences.findOne({ userId });
@@ -46,7 +46,11 @@ const generatePlanLogic = async (userId) => {
 
   const studyHours = getStudyHours(preferredStudyTime);
 
-  // only schedule pending tasks
+  const shuffledStudyHours = [...studyHours].sort(() => Math.random() - 0.5);
+
+  const now = new Date();
+
+  // SORT BY DEADLINE (IMPORTANT)
   const tasks = await Task.find({ userId, status: "pending" }).sort({
     deadline: 1,
   });
@@ -58,63 +62,74 @@ const generatePlanLogic = async (userId) => {
 
   const next14Days = getNext14DaysSlots();
 
-  // Build slots
+  // ==========================================
+  // ✅ BUILD VALID FUTURE SLOTS ONLY
+  // ==========================================
   for (let dayObj of next14Days) {
     const { dayName, fullDate } = dayObj;
 
     if (busyDays.includes(dayName)) continue;
 
-    let dailySlotsAllowed = dailyGoalHours;
+    let dailyMinutesUsed = 0;
+    const maxDailyMinutes = dailyGoalHours * 60;
 
-    for (let hour of studyHours) {
-      if (dailySlotsAllowed <= 0) break;
+    for (let hour of shuffledStudyHours) {
+      const slotDateTime = new Date(`${fullDate}T${hour}:00:00`);
 
-      const slotDateTime = new Date(fullDate + "T" + hour + ":00:00");
+      // ❌ SKIP PAST TIME (CRITICAL FIX)
+      if (slotDateTime <= now) continue;
 
-      // only future slots
-      if (slotDateTime >= new Date()) {
-        availableSlots.push({
-          day: dayName, // ✅ FIX: STORE DAY
-          fullDate,
-          hour,
-          slotDateTime,
-        });
+      // ❌ RESPECT DAILY LIMIT
+      if (dailyMinutesUsed >= maxDailyMinutes) break;
 
-        dailySlotsAllowed -= 1;
-      }
+      availableSlots.push({
+        day: dayName,
+        fullDate,
+        hour,
+        slotDateTime,
+        occupied: false,
+      });
+
+      dailyMinutesUsed += maxSessionMinutes;
     }
   }
 
   if (!availableSlots.length) {
-    return "No available study slots. Reduce busy days or increase daily goal hours.";
+    return "No available study slots. Adjust your preferences.";
   }
 
-  // Clear old scheduled slots for pending tasks
+  // CLEAR OLD SCHEDULE
   await Task.updateMany(
     { userId, status: "pending" },
     { $set: { assignedSlots: [], isScheduled: false } },
   );
 
-  let slotIndex = 0;
-
+  // ==========================================
+  // ✅ SMART ASSIGNMENT
+  // ==========================================
   for (let task of tasks) {
     let remainingMinutes = task.duration;
     let assignedSlots = [];
 
-    while (remainingMinutes > 0 && slotIndex < availableSlots.length) {
-      const slot = availableSlots[slotIndex];
+    for (let slot of availableSlots) {
+      if (remainingMinutes <= 0) break;
 
-      // STOP if slot is after task deadline
+      // ❌ skip used slots
+      if (slot.occupied) continue;
+
+      // ❌ DON'T GO AFTER DEADLINE
       if (slot.slotDateTime > new Date(task.deadline)) break;
 
       assignedSlots.push({
-        day: slot.day, // ✅ FIX: SAVE DAY
+        day: slot.day,
         fullDate: slot.fullDate,
         hour: slot.hour,
       });
 
-      remainingMinutes -= maxSessionMinutes;
-      slotIndex++;
+      slot.occupied = true;
+
+      // ✅ SMART SPLIT
+      remainingMinutes -= Math.min(maxSessionMinutes, remainingMinutes);
     }
 
     if (remainingMinutes > 0) {
@@ -132,7 +147,7 @@ const generatePlanLogic = async (userId) => {
   }
 
   if (unscheduledTasks.length > 0) {
-    return `Plan generated but these tasks could not be scheduled before deadline: ${unscheduledTasks.join(
+    return `Some tasks couldn't be scheduled before deadline: ${unscheduledTasks.join(
       ", ",
     )}`;
   }
@@ -143,7 +158,7 @@ const generatePlanLogic = async (userId) => {
 exports.generatePlanLogic = generatePlanLogic;
 
 // ==========================================
-// ✅ MAIN ROUTE CONTROLLER FUNCTION
+// CONTROLLER
 // ==========================================
 exports.generatePlan = async (req, res) => {
   try {
