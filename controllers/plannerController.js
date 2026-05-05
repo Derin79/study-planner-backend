@@ -2,8 +2,11 @@ const Task = require("../models/Task");
 const UserPreferences = require("../models/UserPreferences");
 
 function getStudyHours(preferredStudyTime) {
-  if (preferredStudyTime === "morning") return [6, 7, 8, 9, 10];
-  if (preferredStudyTime === "afternoon") return [12, 13, 14, 15, 16];
+  if (preferredStudyTime === "morning") return [6, 7, 8, 9, 10, 11];
+  if (preferredStudyTime === "afternoon") return [12, 13, 14, 15, 16, 17];
+  if (preferredStudyTime === "evening") return [18, 19, 20, 21, 22, 23];
+  if (preferredStudyTime === "night") return [0, 1, 2, 3, 4, 5];
+
   return [18, 19, 20, 21, 22];
 }
 
