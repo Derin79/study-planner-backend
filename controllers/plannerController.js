@@ -4,8 +4,8 @@ const UserPreferences = require("../models/UserPreferences");
 function getStudyHours(preferredStudyTime) {
   if (preferredStudyTime === "morning") return [6, 7, 8, 9, 10, 11];
   if (preferredStudyTime === "afternoon") return [12, 13, 14, 15, 16, 17];
-  if (preferredStudyTime === "evening") return [18, 19, 20, 21, 22, 23];
-  if (preferredStudyTime === "night") return [0, 1, 2, 3, 4, 5];
+  if (preferredStudyTime === "evening") return [17, 18, 19, 20, 21];
+  if (preferredStudyTime === "night") return [21, 22, 23];
 
   return [18, 19, 20, 21, 22];
 }
@@ -98,12 +98,27 @@ const generatePlanLogic = async (userId) => {
     return "No available study slots. Adjust your preferences.";
   }
 
-  // CLEAR OLD SCHEDULE
-  await Task.updateMany(
-    { userId, status: "pending" },
-    { $set: { assignedSlots: [], isScheduled: false } },
-  );
+  // ONLY clear tasks that are NOT completed
+  // but KEEP valid future schedules
 
+  const existingTasks = await Task.find({
+    userId,
+    status: "pending",
+  });
+
+  for (const task of existingTasks) {
+    // keep tasks that already have future slots
+    const hasFutureSlots = task.assignedSlots?.some((slot) => {
+      const slotTime = new Date(`${slot.fullDate}T${slot.hour}:00:00`);
+      return slotTime > now;
+    });
+
+    if (!hasFutureSlots) {
+      task.assignedSlots = [];
+      task.isScheduled = false;
+      await task.save();
+    }
+  }
   // ==========================================
   // ✅ SMART ASSIGNMENT
   // ==========================================
