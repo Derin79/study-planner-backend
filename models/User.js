@@ -19,6 +19,10 @@ const userSchema = new mongoose.Schema(
 
     xp: { type: Number, default: 0 },
     level: { type: Number, default: 1 },
+    lastShownLevelPopup: {
+      type: Number,
+      default: 1,
+    },
 
     lastCompletedDate: { type: String, default: "" },
 

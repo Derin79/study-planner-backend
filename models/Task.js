@@ -16,9 +16,11 @@ const taskSchema = new mongoose.Schema(
     // ✅ ONLY STORE REAL DATE + HOUR
     assignedSlots: [
       {
-        day: { type: String }, // ✅ ADD THIS
-        fullDate: { type: String }, // YYYY-MM-DD
+        day: { type: String },
+        fullDate: { type: String },
+
         hour: { type: Number },
+        minute: { type: Number, default: 0 }, // ✅ ADD THIS
       },
     ],
 

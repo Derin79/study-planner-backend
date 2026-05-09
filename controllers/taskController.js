@@ -39,24 +39,40 @@ exports.getTasks = async (req, res) => {
     const now = new Date();
 
     // mark overdue pending tasks as missed
-    await Task.updateMany(
-      {
-        userId,
-        status: "pending",
-        deadline: { $lt: now },
-      },
-      {
-        $set: {
-          status: "missed",
-          isScheduled: false,
-          assignedSlots: [],
-        },
-      },
-    );
+    const tasks = await Task.find({
+      userId,
+      status: "pending",
+    });
 
-    const tasks = await Task.find({ userId }).sort({ deadline: 1 });
+    for (const task of tasks) {
+      if (!task.assignedSlots?.length) continue;
 
-    res.status(200).json(tasks);
+      const slot = task.assignedSlots[0];
+
+      const startTime = new Date(
+        `${slot.fullDate}T${String(slot.hour).padStart(2, "0")}:${String(
+          slot.minute || 0,
+        ).padStart(2, "0")}:00`,
+      );
+
+      // add task duration
+      const endTime = new Date(startTime.getTime() + task.duration * 60000);
+
+      // becomes missed ONLY after duration passes
+      if (now > endTime) {
+        task.status = "missed";
+        task.isScheduled = false;
+        task.assignedSlots = [];
+
+        await task.save();
+      }
+    }
+
+    // const tasks = await Task.find({ userId }).sort({ deadline: 1 });
+
+    const updatedTasks = await Task.find({ userId }).sort({ deadline: 1 });
+
+    res.status(200).json(updatedTasks);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

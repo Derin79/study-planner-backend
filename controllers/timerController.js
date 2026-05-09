@@ -165,7 +165,6 @@ exports.submitReflection = async (req, res) => {
     // ============================
     // ✅ LEVEL TRACKING
     // ============================
-    const oldLevel = user.level || 1;
 
     // ============================
     // ✅ REWARD SYSTEM
@@ -198,8 +197,15 @@ exports.submitReflection = async (req, res) => {
     const newLevel = Math.floor(user.xp / 100) + 1;
     user.level = newLevel;
 
+    // ✅ ONLY show popup during reflection
     let leveledUp = false;
-    if (newLevel > oldLevel) leveledUp = true;
+
+    if (newLevel > (user.lastShownLevelPopup || 1)) {
+      leveledUp = true;
+
+      // mark popup as already shown
+      user.lastShownLevelPopup = newLevel;
+    }
 
     // ============================
     // ✅ BADGE LOGIC

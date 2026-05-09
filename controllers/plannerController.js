@@ -139,6 +139,7 @@ const generatePlanLogic = async (userId) => {
         day: slot.day,
         fullDate: slot.fullDate,
         hour: slot.hour,
+        minute: 0,
       });
 
       slot.occupied = true;
